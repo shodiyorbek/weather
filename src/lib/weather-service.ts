@@ -1,7 +1,87 @@
 import type { OpenWeatherAPIResponse, Settings, LocationQuery } from "@/types"
+import type { AxiosResponse } from "axios"
 import axios from "axios"
+import { throttle } from "./utils"
+
 const API_BASE_URL = "https://api.openweathermap.org/data/2.5/forecast"
 const GEOCODING_API_URL = "https://api.openweathermap.org/geo/1.0/reverse"
+
+interface GeocodingResponse {
+  name: string;
+  country: string;
+  state?: string;
+  lat: number;
+  lon: number;
+}
+
+// Create a throttled version of the fetch function
+const throttledFetch = throttle(
+  async (url: string): Promise<AxiosResponse> => {
+    return axios.get(url)
+  },
+  5000 
+)
+
+interface RawWeatherItem {
+  dt: number
+  main: {
+    temp: number
+    feels_like: number
+    temp_min: number
+    temp_max: number
+    pressure: number
+    sea_level: number
+    grnd_level: number
+    humidity: number
+    temp_kf: number
+  }
+  weather: {
+    id: number
+    main: string
+    description: string
+    icon: string
+  }[]
+  clouds: {
+    all: number
+  }
+  wind: {
+    speed: number
+    deg: number
+    gust: number
+  }
+  visibility: number
+  pop: number
+  rain?: {
+    "3h": number
+  }
+  snow?: {
+    "3h": number
+  }
+  sys: {
+    pod: string
+  }
+  dt_txt: string
+}
+
+interface RawWeatherResponse {
+  cod: string
+  message: number
+  cnt: number
+  list: RawWeatherItem[]
+  city: {
+    id: number
+    name: string
+    coord: {
+      lat: number
+      lon: number
+    }
+    country: string
+    population: number
+    timezone: number
+    sunrise: number
+    sunset: number
+  }
+}
 
 export async function fetchWeatherData(
   location: LocationQuery,
@@ -9,6 +89,7 @@ export async function fetchWeatherData(
   apiKey: string,
 ): Promise<OpenWeatherAPIResponse> {
   let queryParams: string
+  console.log(`Fetching weather data inside service  for ${typeof location === "string" ? location : `${location.lat}, ${location.lon}`}`)
   if (typeof location === "string") {
     queryParams = `q=${encodeURIComponent(location)}`
   } else {
@@ -16,47 +97,65 @@ export async function fetchWeatherData(
   }
 
   const url = `${API_BASE_URL}?${queryParams}&units=${units}&appid=${apiKey}`
-
+console.log(`Fetching weather data url for  ${url}`)
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10000)
-const response = await axios.get(url)
-    // const response = await fetch(url, {
-    //   method: "GET",
-    //   headers: {
-    //     Accept: "application/json",
-    //     "Content-Type": "application/json",
-    //   },
-    //   signal: controller.signal,
-    // })
+    
+    try {
+      const response = await throttledFetch(url)
+      console.log(`Weather data response for ${response}`, response)
+      clearTimeout(timeoutId)
+     
+      if (response.data.cod !== "200") {
+        console.log("Error response:", response)
+        if (response.status === 404) {
 
-    clearTimeout(timeoutId)
-console.log(response.data)
-    if (response.data.cod!=="200") {
-      if (response.status === 404) {
-        throw new Error(
-          `Location not found: ${typeof location === "string" ? location : `${location.lat}, ${location.lon}`}`,
-        )
-      }
-      if (response.status === 401) {
-        throw new Error("Invalid API key. Please check your OpenWeatherMap API key.")
-      }
-      if (response.status >= 500) {
-        throw new Error("Weather service is temporarily unavailable. Please try again later.")
+          throw new Error(
+            `Location not found: ${typeof location === "string" ? location : `${location.lat}, ${location.lon}`}`,
+          )
+        }
+        if (response.status === 401) {
+          throw new Error("Invalid API key. Please check your OpenWeatherMap API key.")
+        }
+        if (response.status >= 500) {
+          throw new Error("Weather service is temporarily unavailable. Please try again later.")
+        }
+
+        const errorData = response.data
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
       }
 
-      const errorData = await response.data
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      const rawData = response.data as RawWeatherResponse
+      if (!rawData || !rawData.list || !Array.isArray(rawData.list) || rawData.list.length === 0) {
+        const locationName = typeof location === "string" ? location : `coordinates ${location.lat}, ${location.lon}`
+        throw new Error(`No weather data available for ${locationName}`)
+      }
+
+      // Transform the data to match the expected types
+      const transformedList = rawData.list.map((item: RawWeatherItem) => {
+        const pod = item.sys.pod.toLowerCase()
+        return {
+          ...item,
+          sys: {
+            ...item.sys,
+            pod: (pod === "d" || pod === "n") ? pod as "d" | "n" : "d"
+          }
+        }
+      }) as OpenWeatherAPIResponse["list"]
+
+      const data: OpenWeatherAPIResponse = {
+        ...rawData,
+        list: transformedList
+      }
+
+      return data
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Request throttled")) {
+        throw error; // Re-throw throttling errors to be handled by the component
+      }
+      throw new Error(`Failed to fetch weather data: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
-
-    const data: OpenWeatherAPIResponse = await response.data
-
-    if (!data || !data.list || data.list.length === 0) {
-      const locationName = typeof location === "string" ? location : `coordinates ${location.lat}, ${location.lon}`
-      throw new Error(`No weather data available for ${locationName}`)
-    }
-
-    return data
   } catch (error) {
     const locationName =
       typeof location === "string" ? location : `coordinates ${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`
@@ -75,7 +174,24 @@ console.log(response.data)
   }
 }
 
-export async function getCurrentLocation(): Promise<{ lat: number; lon: number; cityForMock?: string }> {
+// Create a regular geocoding function
+async function geocodeLocation(latitude: number, longitude: number, apiKey: string): Promise<GeocodingResponse[] | null> {
+  try {
+    const response = await fetch(
+      `${GEOCODING_API_URL}?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`,
+    )
+    if (response.ok) {
+      const data = await response.json() as GeocodingResponse[]
+      return data
+    }
+    return null
+  } catch (error) {
+    console.error('Geocoding error:', error)
+    return null
+  }
+}
+
+export async function getCurrentLocation(apiKey: string): Promise<{ lat: number; lon: number; cityForMock?: string }> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error("Geolocation is not supported by this browser"))
@@ -88,21 +204,15 @@ export async function getCurrentLocation(): Promise<{ lat: number; lon: number; 
 
         // Try to get city name from coordinates
         try {
-          const apiKey = process.env.NEXT_PUBLIC_OPENWEATHERMAP_API_KEY
           if (apiKey) {
-            const response = await fetch(
-              `${GEOCODING_API_URL}?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`,
-            )
-            if (response.ok) {
-              const data = await response.json()
-              if (data && data.length > 0) {
-                resolve({
-                  lat: latitude,
-                  lon: longitude,
-                  cityForMock: data[0].name,
-                })
-                return
-              }
+            const data = await geocodeLocation(latitude, longitude, apiKey)
+            if (data && data.length > 0) {
+              resolve({
+                lat: latitude,
+                lon: longitude,
+                cityForMock: data[0].name,
+              })
+              return
             }
           }
         } catch (error) {
@@ -141,65 +251,4 @@ export async function getCurrentLocation(): Promise<{ lat: number; lon: number; 
   })
 }
 
-// Mock data function for development and fallback
-export function getMockWeatherData(city: string, units: Settings["units"]): OpenWeatherAPIResponse {
-  console.log(`Generating mock data for ${city} with units: ${units}`)
-  const tempUnit = units === "metric" ? 15 : 59
-  const baseTime = Math.floor(Date.now() / 1000)
 
-  const mockList = Array.from({ length: 40 }, (_, i) => {
-    const dt = baseTime + i * 3 * 60 * 60
-    const dayOffset = Math.floor(i / 8)
-
-    return {
-      dt: dt,
-      main: {
-        temp: tempUnit + (Math.random() * 10 - 5) + dayOffset * 0.5,
-        feels_like: tempUnit + (Math.random() * 10 - 5) - 2,
-        temp_min: tempUnit + (Math.random() * 5 - 5),
-        temp_max: tempUnit + (Math.random() * 5 + 5),
-        pressure: 1012 + (Math.random() * 10 - 5),
-        sea_level: 1012,
-        grnd_level: 1000,
-        humidity: 60 + (Math.random() * 20 - 10),
-        temp_kf: 0,
-      },
-      weather: [
-        {
-          id: i % 4 === 0 ? 800 : i % 4 === 1 ? 801 : i % 4 === 2 ? 500 : 300,
-          main: i % 4 === 0 ? "Clear" : i % 4 === 1 ? "Clouds" : i % 4 === 2 ? "Rain" : "Drizzle",
-          description:
-            i % 4 === 0 ? "clear sky" : i % 4 === 1 ? "few clouds" : i % 4 === 2 ? "light rain" : "light drizzle",
-          icon: i % 4 === 0 ? "01d" : i % 4 === 1 ? "02d" : i % 4 === 2 ? "10d" : "09d",
-        },
-      ],
-      clouds: { all: 20 + Math.random() * 30 },
-      wind: {
-        speed: units === "metric" ? 3 + Math.random() * 5 : 7 + Math.random() * 10,
-        deg: Math.random() * 360,
-        gust: units === "metric" ? 5 + Math.random() * 7 : 12 + Math.random() * 15,
-      },
-      visibility: 10000,
-      pop: Math.random() * 0.3,
-      sys: { pod: i % 2 === 0 ? "d" : "n" },
-      dt_txt: new Date(dt * 1000).toISOString().replace("T", " ").substring(0, 19),
-    }
-  })
-
-  return {
-    cod: "200",
-    message: 0,
-    cnt: mockList.length,
-    list: mockList,
-    city: {
-      id: 12345,
-      name: city,
-      coord: { lat: 0, lon: 0 },
-      country: "MCK",
-      population: 100000,
-      timezone: 0,
-      sunrise: baseTime - 6 * 60 * 60,
-      sunset: baseTime + 6 * 60 * 60,
-    },
-  }
-}

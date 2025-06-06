@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Heart, MapPin, Navigation } from "lucide-react"
 import type { WeatherData } from "@/types"
+import { useReducer, useState, useEffect } from 'react';
+import { weatherReducer, initialState } from '../lib/weatherReducer';
+import { useFavoriteCities } from '@/hooks/useFavoriteCities';
 
 interface WeatherHeroProps {
   weatherData: WeatherData | null
@@ -17,6 +20,7 @@ interface WeatherHeroProps {
 
 export default function WeatherHero({ weatherData, units, isLoading, onToggleFavorite, isFavorite }: WeatherHeroProps) {
   const unitSymbol = units === "metric" ? "°C" : "°F"
+  const [state, dispatch] = useReducer(weatherReducer, initialState);
 
   if (isLoading) {
     return (
