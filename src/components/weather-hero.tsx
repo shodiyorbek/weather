@@ -156,20 +156,20 @@ export default function WeatherHero({ weatherData, units, isLoading, onToggleFav
           {/* Max/Min/AVG during the day */}
           <div className="flex justify-between items-center">
             <span className="text-lg font-medium text-white/90">TEMPRATURE (max/min/avg)</span>
-            <span className="text-2xl font-bold">{Math.round(tempratureInfo.max)}/{Math.round(tempratureInfo.min)}/{Math.round(tempratureInfo.avg)} {unitSymbol}</span>
+            <span className="text-xl font-bold">{Math.round(tempratureInfo.max)}/{Math.round(tempratureInfo.min)}/{Math.round(tempratureInfo.avg)} {unitSymbol}</span>
           </div>
           
 
           {/* Humidity */}
           <div className="flex justify-between items-center">
             <span className="text-lg font-medium text-white/90">HUMIDITY</span>
-            <span className="text-2xl font-bold">{weatherData.humidity}%</span>
+            <span className="text-xl font-bold">{weatherData.humidity}%</span>
           </div>
 
           {/* Wind */}
           <div className="flex justify-between items-center">
             <span className="text-lg font-medium text-white/90">WIND</span>
-            <span className="text-2xl font-bold">
+            <span className="text-xl font-bold">
               {weatherData.windSpeed.toFixed(1)} {units === "metric" ? "km/h" : "mph"}
             </span>
           </div>
