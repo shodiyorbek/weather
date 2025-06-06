@@ -4,27 +4,26 @@ import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Heart, MapPin, Navigation } from "lucide-react"
-import type { WeatherData } from "@/types"
-import { useReducer, useState, useEffect } from 'react';
-import { weatherReducer, initialState } from '../lib/weatherReducer';
-import { useFavoriteCities } from '@/hooks/useFavoriteCities';
+import { Heart, MapPin } from "lucide-react"
+import type { Tempratureinfo, WeatherData } from "@/types"
+import { cn } from "@/lib/utils"
 
 interface WeatherHeroProps {
   weatherData: WeatherData | null
   units: "metric" | "imperial"
   isLoading: boolean
   onToggleFavorite: () => void
-  isFavorite: boolean
+  isFavorite: boolean,
+  tempratureInfo:Tempratureinfo ,
+  displayMode: "detailed" | "compact"
 }
 
-export default function WeatherHero({ weatherData, units, isLoading, onToggleFavorite, isFavorite }: WeatherHeroProps) {
+export default function WeatherHero({ weatherData, units, isLoading, onToggleFavorite, isFavorite,tempratureInfo,displayMode }: WeatherHeroProps) {
   const unitSymbol = units === "metric" ? "°C" : "°F"
-  const [state, dispatch] = useReducer(weatherReducer, initialState);
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={cn("grid grid-cols-1  gap-6", displayMode !== "detailed" ? "lg:grid-cols-2": "lg:grid-cols-1")}>
         <Card className="relative overflow-hidden bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 border-0 shadow-xl">
           <CardContent className="p-8">
             <Skeleton className="h-8 w-48 bg-white/20 mb-4" />
@@ -32,11 +31,14 @@ export default function WeatherHero({ weatherData, units, isLoading, onToggleFav
             <Skeleton className="h-20 w-40 bg-white/20" />
           </CardContent>
         </Card>
+        {displayMode === "detailed" &&
         <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-white/30 dark:border-slate-700/50">
-          <CardContent className="p-8">
-            <Skeleton className="h-full w-full" />
-          </CardContent>
-        </Card>
+        <CardContent className="p-8">
+          <Skeleton className="h-full w-full" />
+        </CardContent>
+      </Card>
+
+        }
       </div>
     )
   }
@@ -61,10 +63,10 @@ export default function WeatherHero({ weatherData, units, isLoading, onToggleFav
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      className={cn('grid grid-cols-1  gap-6', displayMode !== "detailed" ? "lg:grid-cols-1" : "lg:grid-cols-2")}
     >
       {/* Main Weather Card */}
-      <Card className={`relative overflow-hidden ${gradientClass} border-0 shadow-2xl`}>
+      <Card className={`relative w-full overflow-hidden ${gradientClass} border-0 shadow-2xl`}>
         {/* Background Image Overlay */}
         {backgroundImage && (
           <div
@@ -145,36 +147,39 @@ export default function WeatherHero({ weatherData, units, isLoading, onToggleFav
       </Card>
 
       {/* Weather Details Card */}
+      {displayMode === "detailed" &&
       <Card className="bg-slate-800/90 dark:bg-slate-900/90 backdrop-blur-xl border-slate-700/50 text-white">
-        <CardContent className="p-8">
-          <h3 className="text-xl font-semibold mb-6 text-white">Weather Details</h3>
+      <CardContent className="p-8">
+        <h3 className="text-xl font-semibold mb-6 text-white">Weather Details</h3>
 
-          <div className="space-y-6">
-            {/* Precipitation */}
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-medium text-white/90">Temperatur (max)</span>
-              <span className="text-2xl font-bold">0%</span>
-            </div>
+        <div className="space-y-6">
+          {/* Max/Min/AVG during the day */}
+          <div className="flex justify-between items-center">
+            <span className="text-lg font-medium text-white/90">TEMPRATURE (max/min/avg)</span>
+            <span className="text-2xl font-bold">{Math.round(tempratureInfo.max)}/{Math.round(tempratureInfo.min)}/{Math.round(tempratureInfo.avg)} {unitSymbol}</span>
+          </div>
+          
 
-            {/* Humidity */}
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-medium text-white/90">HUMIDITY</span>
-              <span className="text-2xl font-bold">{weatherData.humidity}%</span>
-            </div>
-
-            {/* Wind */}
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-medium text-white/90">WIND</span>
-              <span className="text-2xl font-bold">
-                {weatherData.windSpeed.toFixed(1)} {units === "metric" ? "km/h" : "mph"}
-              </span>
-            </div>
+          {/* Humidity */}
+          <div className="flex justify-between items-center">
+            <span className="text-lg font-medium text-white/90">HUMIDITY</span>
+            <span className="text-2xl font-bold">{weatherData.humidity}%</span>
           </div>
 
-          {/* Change Location Button */}
-        
-        </CardContent>
-      </Card>
+          {/* Wind */}
+          <div className="flex justify-between items-center">
+            <span className="text-lg font-medium text-white/90">WIND</span>
+            <span className="text-2xl font-bold">
+              {weatherData.windSpeed.toFixed(1)} {units === "metric" ? "km/h" : "mph"}
+            </span>
+          </div>
+        </div>
+
+        {/* Change Location Button */}
+      
+      </CardContent>
+    </Card>
+      }
     </motion.div>
   )
 }

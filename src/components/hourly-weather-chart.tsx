@@ -4,7 +4,6 @@ import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useRef, useEffect } from "react"
-import { useTheme } from "@/hooks/useTheme"
 
 interface HourlyWeatherChartProps {
   hourlyData: any[]
@@ -12,9 +11,7 @@ interface HourlyWeatherChartProps {
   isLoading: boolean
 }
 
-export default function HourlyWeatherChart({ hourlyData, units, isLoading }: HourlyWeatherChartProps) {
-  const { theme } = useTheme()
-  const unitSymbol = units === "metric" ? "°C" : "°F"
+export default function HourlyWeatherChart({ hourlyData, isLoading }: HourlyWeatherChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

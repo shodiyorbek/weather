@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react"
-import type { WeatherData, Forecast, Settings, LocationQuery } from "@/types"
+import type { WeatherData, Forecast, Settings, LocationQuery, Tempratureinfo } from "@/types"
 import { fetchWeatherData, getCurrentLocation } from '@/lib/weather-service'
 import { useWeather } from '@/context/WeatherContext'
 
@@ -9,6 +9,7 @@ export function useWeatherData() {
   const { state, dispatch } = useWeather()
   const [forecast, setForecast] = useState<Forecast[]>([])
   const [hourlyForecast, setHourlyForecast] = useState<any[]>([])
+  const [tempratureInfo, setTempratureInfo] = useState<Tempratureinfo>()
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [timeZone, setTimeZone] = useState<number>(0)
@@ -83,6 +84,8 @@ export function useWeatherData() {
           icon: item.weather[0].icon,
           description: item.weather[0].description,
         }))
+        const hourlyTemps = hourlyData.map((item: any) => item.temp)
+        setTempratureInfo({ min: Math.min(...hourlyTemps), max: Math.max(...hourlyTemps), avg: hourlyTemps.reduce((a, b) => a + b, 0) / hourlyTemps.length })
         setHourlyForecast(hourlyData)
 
         // Process daily forecast (5 days)
@@ -141,7 +144,7 @@ export function useWeatherData() {
   const handleDetectLocation = useCallback(async () => {
     setIsDetectingLocation(true)
     try {
-      const location = await getCurrentLocation()
+      const location = await getCurrentLocation(API_KEY)
       if (location.cityForMock) {
         dispatch({ type: 'CHANGE_CITY', payload: location.cityForMock })
       }
@@ -159,9 +162,9 @@ export function useWeatherData() {
 
   const handleRefresh = useCallback(() => {
     if (state.city) {
-      loadWeatherData(state.city, { units: state.unit, refreshRate: 30, displayMode: "detailed" })
+      loadWeatherData(state.city, { units: state.unit, refreshRate: state.refreshRate, displayMode: state.displayMode  })
     }
-  }, [state.city, state.unit, loadWeatherData])
+  }, [state.city, state.unit, state.refreshRate, state.displayMode, loadWeatherData])
 
   return {
     forecast,
@@ -173,6 +176,7 @@ export function useWeatherData() {
     loadWeatherData,
     detectUserLocation,
     handleDetectLocation,
-    handleRefresh
+    handleRefresh,
+    tempratureInfo
   }
 }

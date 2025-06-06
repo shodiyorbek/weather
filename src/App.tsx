@@ -1,14 +1,11 @@
-import './App.css'
-import WeatherDashboard from './components/weather-dashboard'
-import { WeatherProvider } from './context/WeatherContext'
+import { WeatherProvider } from '@/context/WeatherContext'
+import WeatherDashboard from '@/components/weather-dashboard'
 
 function App() {
   return (
-    <WeatherProvider>
-      <div>
+      <WeatherProvider>
         <WeatherDashboard />
-      </div>
-    </WeatherProvider>
+      </WeatherProvider>
   )
 }
 

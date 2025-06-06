@@ -7,7 +7,6 @@ import { Search, AlertTriangle } from "lucide-react";
 import { useWeather } from "@/context/WeatherContext";
 import { debounce } from "@/lib/utils";
 import cities from "../assets/cities/worldcities.json";
-import { Item } from "@radix-ui/react-radio-group";
 
 interface City {
   city: string;

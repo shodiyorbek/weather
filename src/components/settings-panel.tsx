@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { X, Settings, Palette, Bell, Globe } from "lucide-react"
 import type { Settings as SettingsType } from "@/types"
+import { useState } from "react"
 
 // Define default settings
 const defaultSettings: SettingsType = {
@@ -30,7 +31,10 @@ export default function SettingsPanel({
 }: SettingsPanelProps) {
   // Use provided settings or defaults
   const currentSettings = settings || defaultSettings
-
+  const [newSettings,setNewSettings] =useState<SettingsType>(currentSettings)
+  const handleSave = (newSettings: Partial<SettingsType>) => {
+    onSettingsChange(newSettings);
+  }
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -58,8 +62,8 @@ export default function SettingsPanel({
               <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Temperature Units</Label>
             </div>
             <RadioGroup
-              value={currentSettings.units}
-              onValueChange={(value: "metric" | "imperial") => onSettingsChange({ units: value })}
+              value={newSettings.units}
+              onValueChange={(value: "metric" | "imperial") => setNewSettings({ ...newSettings,units: value })}
               className="flex space-x-6"
             >
               <div className="flex items-center space-x-2">
@@ -84,14 +88,14 @@ export default function SettingsPanel({
                 <Bell className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                 <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Auto Refresh</Label>
               </div>
-              <span className="text-sm text-slate-500 dark:text-slate-400">{currentSettings.refreshRate} min</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{newSettings.refreshRate} min</span>
             </div>
             <Slider
-              value={[currentSettings.refreshRate]}
+              value={[newSettings.refreshRate]}
               min={5}
               max={60}
               step={5}
-              onValueChange={(value) => onSettingsChange({ refreshRate: value[0] })}
+              onValueChange={(value) => setNewSettings({ ...newSettings,refreshRate: value[0] })}
               className="w-full"
             />
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -112,8 +116,8 @@ export default function SettingsPanel({
                 </Label>
                 <Switch
                   id="detailed-view"
-                  checked={currentSettings.displayMode === "detailed"}
-                  onCheckedChange={(checked) => onSettingsChange({ displayMode: checked ? "detailed" : "compact" })}
+                  checked={newSettings.displayMode === "detailed"}
+                  onCheckedChange={(checked) => setNewSettings({...newSettings, displayMode: checked ? "detailed" : "compact" })}
                 />
               </div>
             </div>
@@ -128,7 +132,7 @@ export default function SettingsPanel({
             >
               Cancel
             </Button>
-            <Button onClick={onClose} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white">
+            <Button onClick={()=>handleSave(newSettings)} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white">
               Save Changes
             </Button>
           </div>

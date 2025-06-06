@@ -30,20 +30,15 @@ import ErrorBoundry from "./error-boundry"
 import SiteTour from '@/components/site-tour'
 import SearchBar from "./search-bar"
 
-// Default settings
-const defaultSettings: Settings = {
-  units: "metric",
-  refreshRate: 30,
-  displayMode: "detailed",
-}
+
+
 
 export default function WeatherDashboard() {
   const { state, dispatch } = useWeather();
   const { favoriteCities, addFavoriteCity, removeFavoriteCity, isFavoriteCity } = useFavoriteCities();
   const [isCurrentCityFavorite, setIsCurrentCityFavorite] = useState(false);
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeView, setActiveView] = useState<"overview" | "hourly" | "weekly">("overview");
+  const [activeView, setActiveView] = useState<"overview" | "forecast" | "statistic">("overview");
 
   const {
     forecast,
@@ -55,21 +50,28 @@ export default function WeatherDashboard() {
     loadWeatherData,
     detectUserLocation,
     handleDetectLocation,
-    handleRefresh
+    handleRefresh,
+    tempratureInfo
   } = useWeatherData();
 
   // Initial location detection
   useEffect(() => {
     detectUserLocation();
   }, [detectUserLocation]);
+  useEffect(()=>{
+    handleRefresh()
+  },[state.unit,state.displayMode])
 
   // Load weather data when city changes
   useEffect(() => {
     if (state.city) {
       console.log("Loading weather for city:", state.city);
-      loadWeatherData(state.city, settings);
+      loadWeatherData(state.city, {
+        units: state.unit,
+        refreshRate: state.refreshRate,
+        displayMode: state.displayMode});
     }
-  }, [state.city, settings.units, loadWeatherData, settings]);
+  }, [state.city,  loadWeatherData]);
 
   // Check if current city is favorite
   useEffect(() => {
@@ -80,11 +82,12 @@ export default function WeatherDashboard() {
   }, [state.weatherData, isFavoriteCity]);
 
   const handleSettingsChange = (newSettings: Partial<Settings>) => {
-    const updatedSettings = { ...settings, ...newSettings };
-    setSettings(updatedSettings);
-    if (newSettings.units) {
-      dispatch({ type: 'TOGGLE_UNIT' });
-    }
+    console.log("Settings changed:", newSettings);
+    dispatch({ type: "TOGGLE_UNIT", payload: newSettings.units });
+  dispatch({ type: "CHANGE_DISPLAY_MODE", payload: newSettings.displayMode });
+    dispatch({ type: "CHANGE_REFRESH_RATE", payload: newSettings.refreshRate });
+
+    setShowSettings(false);
   };
 
   const toggleFavorite = async (city: string, country: string) => {
@@ -202,9 +205,9 @@ export default function WeatherDashboard() {
             {/* Navigation Tabs */}
             <div className="flex items-center gap-1 mt-4 p-1 bg-white/50 dark:bg-slate-800/50 rounded-xl backdrop-blur-sm">
               {[
-                { id: "overview", label: "Overview", icon: Cloud },
-                { id: "hourly", label: "Hourly", icon: Clock },
-                { id: "weekly", label: "Weekly", icon: Moon },
+                { id: "overview", label: "Current weather", icon: Cloud },
+                { id: "forecast", label: "Forecast", icon: Clock },
+                { id: "statistic", label: "Statistic", icon: Moon },
               ].map((tab) => (
                 <Button
                   key={tab.id}
@@ -213,7 +216,7 @@ export default function WeatherDashboard() {
                   onClick={() => setActiveView(tab.id as any)}
                   className={`flex-1 ${
                     activeView === tab.id
-                      ? "bg-white dark:bg-slate-700 shadow-sm"
+                      ? "bg-white dark:bg-slate-700 text-black hover:bg-black/10 shadow-sm"
                       : "hover:bg-white/50 dark:hover:bg-slate-700/50"
                   }`}
                 >
@@ -260,8 +263,11 @@ export default function WeatherDashboard() {
                 {/* Hero Section - Main Weather Cards */}
                 <div className="weather-hero">
                   <WeatherHero
+                  displayMode={state.displayMode}
+                  //@ts-ignore
+                    tempratureInfo={tempratureInfo}
                     weatherData={state.weatherData}
-                    units={settings.units}
+                    units={state.unit}
                     isLoading={isLoading || isDetectingLocation}
                     onToggleFavorite={() => state.weatherData && toggleFavorite(state.weatherData.city, state.weatherData.country)}
                     isFavorite={isCurrentCityFavorite}
@@ -276,7 +282,7 @@ export default function WeatherDashboard() {
                   </h3>
                   <HourlyWeatherChart
                     hourlyData={hourlyForecast}
-                    units={settings.units}
+                    units={state.unit}
                     isLoading={isLoading || isDetectingLocation}
                   />
                 </div>
@@ -285,29 +291,29 @@ export default function WeatherDashboard() {
                 <div className="weekly-forecast">
                   <WeeklyForecast
                     forecastData={forecast}
-                    units={settings.units}
+                    units={state.unit}
                     isLoading={isLoading || isDetectingLocation}
                     detailed={false}
                   />
                 </div>
 
                 {/* Secondary Grid - Stats and Chart */}
-                <div className="grid grid-cols-1 gap-6">
+                <div className="flex flex-col gap-6">
                   <WeatherStats
                     weatherData={state.weatherData}
-                    units={settings.units}
+                    units={state.unit}
                     isLoading={isLoading || isDetectingLocation}
                   />
                   <WeatherChart
                     forecastData={forecast}
-                    units={settings.units}
+                    units={state.unit}
                     isLoading={isLoading || isDetectingLocation}
                   />
                 </div>
               </motion.div>
             )}
 
-            {activeView === "hourly" && (
+            {activeView === "forecast" && (
               <motion.div
                 key="hourly"
                 initial={{ opacity: 0, y: 20 }}
@@ -315,32 +321,39 @@ export default function WeatherDashboard() {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6"
               >
-                <HourlyWeatherChart
-                  hourlyData={hourlyForecast}
-                  units={settings.units}
-                  isLoading={isLoading || isDetectingLocation}
-                />
+               
                 <HourlyForecast
                   hourlyData={hourlyForecast}
-                  units={settings.units}
+                  units={state.unit}
                   isLoading={isLoading || isDetectingLocation}
+                />
+                 <WeeklyForecast
+                  forecastData={forecast}
+                  units={state.unit}
+                  isLoading={isLoading || isDetectingLocation}
+                  detailed={true}
                 />
               </motion.div>
             )}
 
-            {activeView === "weekly" && (
+            {activeView === "statistic" && (
               <motion.div
-                key="weekly"
+                key="statistic"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
               >
-                <WeeklyForecast
-                  forecastData={forecast}
-                  units={settings.units}
+                <HourlyWeatherChart
+                  hourlyData={hourlyForecast}
+                  units={state.unit}
                   isLoading={isLoading || isDetectingLocation}
-                  detailed={true}
                 />
+                <div className="mt-2">
+                <WeatherChart
+                    forecastData={forecast}
+                    units={state.unit}
+                    isLoading={isLoading || isDetectingLocation}
+                  /></div>
               </motion.div>
             )}
 
@@ -358,7 +371,14 @@ export default function WeatherDashboard() {
               >
                 <div onClick={(e) => e.stopPropagation()}>
                   <SettingsPanel
-                    settings={settings}
+                    settings={
+                      {
+                        units: state.unit,
+                        displayMode: state.displayMode,
+                        refreshRate: state.refreshRate
+
+                      }
+                    }
                     onSettingsChange={handleSettingsChange}
                     onClose={() => setShowSettings(false)}
                   />

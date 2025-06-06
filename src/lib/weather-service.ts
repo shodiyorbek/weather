@@ -16,6 +16,7 @@ interface GeocodingResponse {
 
 // Create a throttled version of the fetch function
 const throttledFetch = throttle(
+  //@ts-ignore
   async (url: string): Promise<AxiosResponse> => {
     return axios.get(url)
   },
@@ -103,7 +104,7 @@ console.log(`Fetching weather data url for  ${url}`)
     const timeoutId = setTimeout(() => controller.abort(), 10000)
     
     try {
-      const response = await throttledFetch(url)
+      const response:any = await throttledFetch(url)
       console.log(`Weather data response for ${response}`, response)
       clearTimeout(timeoutId)
      
@@ -204,6 +205,7 @@ export async function getCurrentLocation(apiKey: string): Promise<{ lat: number;
 
         // Try to get city name from coordinates
         try {
+         
           if (apiKey) {
             const data = await geocodeLocation(latitude, longitude, apiKey)
             if (data && data.length > 0) {

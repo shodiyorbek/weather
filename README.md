@@ -2,6 +2,9 @@
 
 A modern weather application built with React and TypeScript that provides real-time weather information, forecasts, and location-based weather updates.
 
+# Avaiable on the web
+[Weather app](https://weather.shodiyorbek.uz)
+
 ## 🚀 Technologies Used
 
 - **Frontend Framework**: React 18 with TypeScript
@@ -40,7 +43,7 @@ Before you begin, ensure you have the following installed:
 
 2. Install dependencies:
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 3. Create a `.env` file and add your API key:
@@ -69,11 +72,6 @@ npm run preview
 # Run tests in watch mode
 npm test
 
-# Run tests with coverage
-npm run test:coverage
-
-# Run tests with UI
-npm run test:ui
 ```
 
 ## 📦 Project Structure
@@ -102,6 +100,90 @@ weather-app/
 - Humidity and pressure information
 - Sunrise and sunset times
 - Responsive design for all devices
+- Performance optimizations with debouncing and throttling
+- Interactive weather charts and visualizations
+- Dark/Light theme support
+- Favorite cities management
+- Site tour for new users
+
+## 🔧 Performance Optimizations
+
+### Debouncing
+The application implements debouncing in several key areas to optimize performance and reduce unnecessary API calls:
+
+1. **Search Input**
+```typescript
+const debouncedSearch = useDebounce(searchTerm, 500);
+useEffect(() => {
+  if (debouncedSearch) {
+    // Perform search
+  }
+}, [debouncedSearch]);
+```
+
+2. **Weather Data Refresh**
+```typescript
+const debouncedRefresh = useDebounce(handleRefresh, 1000);
+// Use debouncedRefresh for manual refresh operations
+```
+
+### Throttling
+Throttling is implemented for frequent operations to ensure consistent performance:
+
+1. **Scroll Events**
+```typescript
+const throttledScroll = useThrottle(handleScroll, 100);
+window.addEventListener('scroll', throttledScroll);
+```
+
+2. **Window Resize**
+```typescript
+const throttledResize = useThrottle(handleResize, 200);
+window.addEventListener('resize', throttledResize);
+```
+
+## 🎯 Unique Project Aspects
+
+1. **Smart Data Caching**
+   - Implements a sophisticated caching system for weather data
+   - Reduces API calls while maintaining data freshness
+   - Handles offline scenarios gracefully
+
+2. **Advanced Error Handling**
+   - Comprehensive error boundaries
+   - User-friendly error messages
+   - Automatic retry mechanisms for failed API calls
+
+3. **Dynamic Theme System**
+   - Automatic theme switching based on time of day
+   - Smooth transitions between themes
+   - Customizable color schemes
+
+4. **Progressive Loading**
+   - Implements skeleton loading states
+   - Progressive image loading
+   - Smooth transitions between views
+
+5. **Accessibility Features**
+   - ARIA labels and roles
+   - Keyboard navigation support
+   - Screen reader compatibility
+   - High contrast mode support
+
+6. **Performance Monitoring**
+   - Real-time performance metrics
+   - Error tracking and reporting
+   - User interaction analytics
+
+7. **Smart Location Detection**
+   - Multiple fallback methods for location detection
+   - Caching of user's last known location
+   - Permission handling with user-friendly prompts
+
+8. **Responsive Design Patterns**
+   - Mobile-first approach
+   - Adaptive layouts for different screen sizes
+   - Touch-friendly interface elements
 
 ## 🧪 Testing
 

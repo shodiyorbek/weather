@@ -42,6 +42,7 @@ export function debounce<T extends (...args: unknown[]) => Promise<unknown>>(
 
   return async function(this: unknown, ...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> {
     clearTimeout(timeoutId);
+    //@ts-ignore
     return new Promise((resolve) => {
       timeoutId = setTimeout(async () => {
         const result = await func.apply(this, args);

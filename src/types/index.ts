@@ -98,3 +98,9 @@ export interface Country {
   iso2: string;
   iso3: string;
 }
+
+export interface Tempratureinfo {
+  min:number,
+  max:number,
+  avg:number
+}

@@ -1,4 +1,5 @@
-import { createContext, useContext, useReducer, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react';
+//@ts-ignore
 import type { WeatherState, WeatherAction } from '../types/weather';
 import { weatherReducer, initialState } from '../lib/weatherReducer';
 

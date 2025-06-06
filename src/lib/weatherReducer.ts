@@ -1,9 +1,12 @@
+//@ts-ignore
 import type { WeatherState, WeatherAction } from '../types/weather';
 
 const initialState: WeatherState = {
   city: '',
   weatherData: null,
-  unit: 'metric',
+  unit:'metric',
+  refreshRate:30,
+  displayMode: 'detailed',
   error: null,
 };
 
@@ -33,7 +36,16 @@ export function weatherReducer(state: WeatherState, action: WeatherAction): Weat
         ...state,
         error: action.payload,
       };
-
+      case 'CHANGE_DISPLAY_MODE':
+        return {
+          ...state,
+          displayMode: action.payload,
+        };
+        case 'CHANGE_REFRESH_RATE':
+          return {
+            ...state,
+            refreshRate: action.payload,
+          };
     case 'CLEAR_ERROR':
       return {
         ...state,
